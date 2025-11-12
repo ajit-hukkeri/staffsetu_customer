@@ -1,20 +1,23 @@
 // src/screens/AddressSelectionScreen.tsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Alert } from 'react-native';
-import { useNavigation, NavigationProp, CommonActions } from '@react-navigation/native'; // Import CommonActions
+import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
 import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
 import { useAuth } from '../hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
-import { ServiceAddress, RootStackParamList } from '../navigation/MainTabNavigator'; // Import main types
+import { ServiceAddress, RootStackParamList } from '../navigation/MainTabNavigator';
 
-// --- REMOVED prop drilling ---
-
-// This navigation prop is for the ROOT stack
 type NavProp = NavigationProp<RootStackParamList>;
+type RoutePropType = RouteProp<RootStackParamList, 'AddressSelection'>;
 
 export default function AddressSelectionScreen() {
-  const navigation = useNavigation<NavProp>(); // Use ROOT navigation
+  const navigation = useNavigation<NavProp>();
+  const route = useRoute<RoutePropType>();
+  
+  // --- FIXED: Get context from params ---
+  const { serviceId, serviceName } = route.params;
+  
   const { user } = useAuth();
   const [addresses, setAddresses] = useState<ServiceAddress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,19 +44,14 @@ export default function AddressSelectionScreen() {
     return () => unsubscribe();
   }, [user]);
 
-  // --- THIS IS THE FIX ---
-  // This function sends the data back to the form screen
+  // --- FIXED: Navigate back with full context ---
   const selectAddress = (address: ServiceAddress) => {
-    // We use CommonActions.navigate to be explicit
-    navigation.dispatch(
-      CommonActions.navigate({
-        name: 'ServiceRequestForm',
-        params: { selectedAddress: address },
-        merge: true, // This merges with existing params (serviceId, etc)
-      })
-    );
+    navigation.navigate('ServiceRequestForm', {
+      serviceId,
+      serviceName,
+      selectedAddress: address
+    });
   };
-  // -----------------------
 
   if (loading) {
     return <ActivityIndicator size="large" style={{ marginTop: 20 }} />;
@@ -63,8 +61,8 @@ export default function AddressSelectionScreen() {
     <View style={styles.container}>
       <Pressable 
         style={styles.addButton} 
-        // Use root navigation to go to the MapPicker
-        onPress={() => navigation.navigate('MapPicker')}
+        // --- FIXED: Pass context to MapPicker ---
+        onPress={() => navigation.navigate('MapPicker', { serviceId, serviceName })}
       >
         <Ionicons name="add-circle" size={24} color="#007AFF" />
         <Text style={styles.addButtonText}>Add a New Address</Text>
@@ -89,12 +87,28 @@ export default function AddressSelectionScreen() {
   );
 }
 
-// Styles are unchanged
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9f9f9' },
-  addButton: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  addButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 16, 
+    backgroundColor: '#fff', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#eee' 
+  },
   addButtonText: { fontSize: 16, color: '#007AFF', marginLeft: 10, fontWeight: '600' },
-  addressCard: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee', marginHorizontal: 10, marginVertical: 5, borderRadius: 8 },
+  addressCard: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 16, 
+    backgroundColor: '#fff', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#eee', 
+    marginHorizontal: 10, 
+    marginVertical: 5, 
+    borderRadius: 8 
+  },
   addressText: { flex: 1, marginLeft: 15 },
   nickname: { fontSize: 16, fontWeight: 'bold' },
   emptyText: { textAlign: 'center', marginTop: 30, fontSize: 16, color: 'gray' },

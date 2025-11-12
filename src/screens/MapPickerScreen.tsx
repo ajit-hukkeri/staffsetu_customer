@@ -3,12 +3,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator, Alert, Button, Text } from 'react-native';
 import MapView, { Region } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { AddressStackParamList } from '../navigation/AddressModalNavigator'; // NEW Import
+import { useNavigation, useRoute, NavigationProp, RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from '../navigation/MainTabNavigator';
 import { Ionicons } from '@expo/vector-icons';
 
-// Use the MODAL's navigation prop
-type NavProp = NavigationProp<AddressStackParamList>;
+// --- FIXED: Use RootStackParamList ---
+type NavProp = NavigationProp<RootStackParamList>;
+type RoutePropType = RouteProp<RootStackParamList, 'MapPicker'>;
 
 const BENGALURU_COORDS = {
   latitude: 12.9716,
@@ -18,7 +19,12 @@ const BENGALURU_COORDS = {
 };
 
 export default function MapPickerScreen() {
-  const navigation = useNavigation<NavProp>(); // Uses modal's navigation
+  const navigation = useNavigation<NavProp>();
+  const route = useRoute<RoutePropType>();
+  
+  // --- FIXED: Get context from params ---
+  const { serviceId, serviceName } = route.params;
+  
   const [initialRegion, setInitialRegion] = useState<Region | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<Region>(BENGALURU_COORDS);
   
@@ -50,16 +56,23 @@ export default function MapPickerScreen() {
     })();
   }, []);
 
+  // --- FIXED: Pass context forward to AddressDetails ---
   const onConfirmLocation = () => {
-    // Navigates WITHIN the modal
     navigation.navigate('AddressDetails', {
       latitude: selectedRegion.latitude,
       longitude: selectedRegion.longitude,
+      serviceId,
+      serviceName
     });
   };
 
   if (!initialRegion) {
-    return <View style={styles.container}><ActivityIndicator size="large" /><Text>Getting your location...</Text></View>;
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" />
+        <Text>Getting your location...</Text>
+      </View>
+    );
   }
 
   return (
@@ -83,7 +96,6 @@ export default function MapPickerScreen() {
   );
 }
 
-// Styles are unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,

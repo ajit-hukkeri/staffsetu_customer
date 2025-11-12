@@ -10,32 +10,24 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
-  Platform,
   TouchableOpacity,
   Pressable,
-  // --- REMOVED Modal ---
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-// --- We use RootStackParamList from the main navigator ---
-import { RootStackParamList, ServiceAddress} from '../navigation/MainTabNavigator'; 
+import { RootStackParamList, ServiceAddress } from '../navigation/MainTabNavigator';
 import { auth, db } from '../firebase/firebaseConfig';
 import { doc, getDoc, addDoc, collection, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import CheckBox from 'expo-checkbox';
 import { Ionicons } from '@expo/vector-icons';
 
-// --- REMOVED AddressModalNavigator import ---
-
 type Props = NativeStackScreenProps<RootStackParamList, 'ServiceRequestForm'>;
 
 export default function ServiceRequestFormScreen({ route, navigation }: Props) {
   
-  // --- THIS IS THE FIX for the 'undefined' bug ---
-  // We save the initial params to state.
-  const [serviceId, setServiceId] = useState(route.params.serviceId);
-  const [serviceName, setServiceName] = useState(route.params.serviceName);
-  // --------------------------------------------
-
+  // --- FIXED: Get params directly from route (they're now required) ---
+  const { serviceId, serviceName } = route.params;
+  
   const [userOrgId, setUserOrgId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [staffCount, setStaffCount] = useState('');
@@ -43,8 +35,6 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
   const [details, setDetails] = useState('');
   const [quoteGuide, setQuoteGuide] = useState('');
   const [address, setAddress] = useState<ServiceAddress | null>(null);
-
-  // --- REMOVED isAddressModalVisible state ---
   
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
@@ -53,23 +43,20 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
   const [isOneDayJob, setIsOneDayJob] = useState(true);
   const [showPicker, setShowPicker] = useState<null | 'start' | 'end' | 'time_start' | 'time_end'>(null);
 
-  // --- ADDED THIS HOOK BACK ---
-  // This listens for the 'selectedAddress' param when we return
+  // Listen for selectedAddress coming back from modal flow
   useEffect(() => {
     if (route.params?.selectedAddress) {
       setAddress(route.params.selectedAddress);
     }
   }, [route.params?.selectedAddress]);
-  // ----------------------------
 
-  // Set the screen title (Uses state)
+  // Set the screen title
   useEffect(() => {
     navigation.setOptions({ title: `Request: ${serviceName}` });
   }, [navigation, serviceName]);
 
-  // Fetch user's orgId and Quote Guide (Uses state)
+  // Fetch user's orgId and Quote Guide
   useEffect(() => {
-    // ... (This logic is correct and unchanged)
     const user = auth.currentUser;
     if (user) {
       const userDocRef = doc(db, 'users', user.uid);
@@ -82,6 +69,7 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
         }
       });
     }
+    
     const fetchQuoteGuide = async () => {
       if (!serviceId) return;
       try {
@@ -91,12 +79,14 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
           const rateData = querySnapshot.docs[0].data();
           setQuoteGuide(`(Usual rate: ₹${rateData.rate} per hour)`);
         }
-      } catch (e) { console.error("No quote guide found:", e); }
+      } catch (e) { 
+        console.error("No quote guide found:", e); 
+      }
     };
     fetchQuoteGuide();
   }, [navigation, serviceId]);
 
-  // --- Date/Time Handlers (Unchanged) ---
+  // Date/Time Handlers
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     const currentDate = selectedDate || (showPicker === 'start' ? startDate : endDate);
     setShowPicker(null);
@@ -107,6 +97,7 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
       setEndDate(currentDate);
     }
   };
+
   const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
     const currentTime = selectedTime || (showPicker === 'time_start' ? startTime : endTime);
     setShowPicker(null);
@@ -116,10 +107,8 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
       setEndTime(currentTime);
     }
   };
-  
-  // --- REMOVED handleAddressSelect ---
 
-  // --- Submit Handler (Unchanged, it works with 'address' state) ---
+  // Submit Handler
   const handleSubmitRequest = async () => {
     if (!staffCount || !details) {
       Alert.alert('Missing Details', 'Please fill out "Staff Needed" and "Details".');
@@ -129,10 +118,11 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
       Alert.alert('Missing Address', 'Please select a service address.');
       return;
     }
-    // ... (Your existing submit logic is 100% correct)
+
     setLoading(true);
     const user = auth.currentUser;
     const finalEndDate = isOneDayJob ? startDate : endDate;
+    
     try {
       await addDoc(collection(db, 'serviceRequests'), {
         orgId: userOrgId,
@@ -157,6 +147,7 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
           longitude: address.longitude,
         }
       });
+      
       setLoading(false);
       Alert.alert('Request Submitted', 'Your request has been submitted.');
       navigation.popToTop();
@@ -181,11 +172,14 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
             Please provide details for your job. Our team will review and send you a quote.
           </Text>
 
-          {/* --- UPDATED ADDRESS BUTTON --- */}
+          {/* --- FIXED: Pass serviceId and serviceName to address flow --- */}
           <Text style={styles.label}>Service Address</Text>
           <Pressable 
             style={styles.addressButton} 
-            onPress={() => navigation.navigate('AddressSelection')} // <-- CHANGED
+            onPress={() => navigation.navigate('AddressSelection', {
+              serviceId,
+              serviceName
+            })}
           >
             <Ionicons name="location" size={20} color="#333" />
             <View style={styles.addressButtonTextContainer}>
@@ -200,9 +194,7 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#888" />
           </Pressable>
-          {/* ------------------------ */}
 
-          {/* ... (Rest of your form is 100% unchanged) ... */}
           <Text style={styles.label}>Number of Staff Needed</Text>
           <TextInput
             style={styles.input}
@@ -211,6 +203,7 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
             onChangeText={setStaffCount}
             keyboardType="number-pad"
           />
+
           <View style={styles.checkboxContainer}>
             <CheckBox
               value={isOneDayJob}
@@ -222,24 +215,34 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
             />
             <Text style={styles.label}>This is a one-day job</Text>
           </View>
+
           <Text style={styles.label}>Start Date</Text>
           <Button onPress={() => showPickerModal('start')} title={startDate.toLocaleDateString()} />
+
           {!isOneDayJob && (
             <>
               <Text style={styles.label}>End Date</Text>
               <Button onPress={() => showPickerModal('end')} title={endDate.toLocaleDateString()} />
             </>
           )}
+
           <View style={styles.timeRow}>
             <View style={styles.timeBlock}>
               <Text style={styles.label}>Start Time</Text>
-              <Button onPress={() => showPickerModal('time_start')} title={startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} />
+              <Button 
+                onPress={() => showPickerModal('time_start')} 
+                title={startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} 
+              />
             </View>
             <View style={styles.timeBlock}>
               <Text style={styles.label}>End Time</Text>
-              <Button onPress={() => showPickerModal('time_end')} title={endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} />
+              <Button 
+                onPress={() => showPickerModal('time_end')} 
+                title={endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} 
+              />
             </View>
           </View>
+
           {showPicker && (
             <DateTimePicker
               testID="dateTimePicker"
@@ -254,6 +257,7 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
               minimumDate={new Date()}
             />
           )}
+
           <Text style={styles.label}>Your Budget (Optional)</Text>
           <TextInput
             style={styles.input}
@@ -262,11 +266,13 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
             onChangeText={setInitialBudget}
             keyboardType="number-pad"
           />
+
           {quoteGuide ? (
             <TouchableOpacity onPress={() => Alert.alert('Quote Guide', quoteGuide.replace(/[\(\)]/g, ''))}>
               <Text style={styles.quoteGuide}>{quoteGuide}</Text>
             </TouchableOpacity>
           ) : null}
+
           <Text style={styles.label}>Additional Details</Text>
           <TextInput
             style={styles.textInput}
@@ -275,6 +281,7 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
             onChangeText={setDetails}
             multiline
           />
+
           {loading ? (
             <ActivityIndicator size="large" style={styles.button} />
           ) : (
@@ -283,17 +290,12 @@ export default function ServiceRequestFormScreen({ route, navigation }: Props) {
               onPress={handleSubmitRequest}
             />
           )}
-
         </View>
       </ScrollView>
-
-      {/* --- REMOVED <Modal> COMPONENT --- */}
-
     </SafeAreaView>
   );
 }
 
-// --- Styles (Unchanged) ---
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, padding: 20 },

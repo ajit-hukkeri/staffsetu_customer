@@ -34,20 +34,22 @@ export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<HomeTabParamList>;
   CategoryServices: { categoryId: string; categoryName: string };
   
-  // --- THIS IS THE FIX for the 'undefined' bug ---
-  // We make these optional so we can merge params
+  // --- FIXED: Make serviceId/serviceName required, selectedAddress optional ---
   ServiceRequestForm: { 
-    serviceId?: string; 
-    serviceName?: string; 
+    serviceId: string; 
+    serviceName: string; 
     selectedAddress?: ServiceAddress; 
   };
-  // ------------------------------------------
 
-  // --- ADD THE MODAL STACK PARAMS ---
-  AddressSelection: undefined;
-  MapPicker: undefined;
-  AddressDetails: { latitude: number; longitude: number };
-  // ----------------------------------
+  // --- FIXED: Pass context through the entire address flow ---
+  AddressSelection: { serviceId: string; serviceName: string };
+  MapPicker: { serviceId: string; serviceName: string };
+  AddressDetails: { 
+    latitude: number; 
+    longitude: number;
+    serviceId: string;
+    serviceName: string;
+  };
 };
 
 export type HomeTabParamList = {
@@ -60,7 +62,6 @@ const Tab = createBottomTabNavigator<HomeTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function HomeTabs() {
-  // ... (Your HomeTabs component is correct, no changes needed)
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -95,10 +96,7 @@ export default function MainTabNavigator() {
       <Stack.Screen name="CategoryServices" component={CategoryServicesScreen} />
       <Stack.Screen name="ServiceRequestForm" component={ServiceRequestFormScreen} />
       
-      {/* --- NEW MODAL GROUP ---
-        This tells React Navigation to present these screens
-        as modals sliding up from the bottom.
-      */}
+      {/* --- MODAL GROUP for Address Screens --- */}
       <Stack.Group screenOptions={{ presentation: 'modal' }}>
         <Stack.Screen 
           name="AddressSelection" 
@@ -116,7 +114,6 @@ export default function MainTabNavigator() {
           options={{ title: 'Address Details' }} 
         />
       </Stack.Group>
-      {/* --------------------- */}
     </Stack.Navigator>
   );
 }
