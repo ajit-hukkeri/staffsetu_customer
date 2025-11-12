@@ -3,12 +3,21 @@
 # dependencies
 node_modules/
 
+# Secret environment variables for Cloud Functions
+functions/.env
+
+# Firebase emulator runtime config
+functions/.runtimeconfig.json
+
+# Firebase function secrets
+/functions/.env.*
+
 # Expo
 .expo/
 dist/
 web-build/
 expo-env.d.ts
-
+staffsetu-dc743-firebase-adminsdk-fbsvc-2eca6ea437.json
 # Native
 .kotlin/
 *.orig.*
@@ -39,3 +48,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+serviceAccountKey.json
+services_with_categories.txt
+seed.js
